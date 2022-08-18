@@ -9,9 +9,8 @@ import "hardhat/console.sol";
 
 
 error NeedMoreETHSent();
-error RangeOutOfBounds();
 error MintIsOver();
-error  OutOfLevelRange();
+error NeedRandomNumber();
 
 contract CryptagendeGame is ERC721URIStorage, VRFConsumerBaseV2, Ownable {
     using Strings for uint256;
@@ -24,6 +23,7 @@ contract CryptagendeGame is ERC721URIStorage, VRFConsumerBaseV2, Ownable {
     uint32 private immutable _callbackGasLimit;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
+    uint256[] private _randomWords;
 
     // NFT Variables
     uint256 private _mintFee = 1000000000000000;
@@ -38,14 +38,13 @@ contract CryptagendeGame is ERC721URIStorage, VRFConsumerBaseV2, Ownable {
     uint8[8] private levelIDs = [0, 1, 2, 3, 4, 5, 6, 7];
     uint256[8] private percentRange = [0, 1, 36, 90, 240, 440, 650, 1000];
 
-    mapping(uint256 => bool) opened;
-    mapping(uint256 => string) tokenURIs;
+    mapping(uint256 => bool) cardOpened;
 
     // VRF Helpers
-    mapping(uint256 => address) public _requestIdToSender;
+    mapping(uint256 => uint256) _tokenRequestID;
 
     // Events
-    event NftRequested(uint256 indexed requestId, address requester);
+    event ChainlinkRequestId(uint256 indexed _tokenCounter,uint256 requestId ,address requester);
     event NftMinted(address minter,uint256 tokenID);
 
     constructor(
@@ -60,10 +59,12 @@ contract CryptagendeGame is ERC721URIStorage, VRFConsumerBaseV2, Ownable {
         _callbackGasLimit = callbackGasLimit;
     }
 
-    function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override{}
+    function fulfillRandomWords(uint256, uint256[] memory randomWords) internal override{
+       _randomWords = randomWords;
+    }
 
-    function requestRandomWords() private returns (uint256 requestId) {
-        requestId = _vrfCoordinator.requestRandomWords(
+    function requestRandomWords()external onlyOwner{
+        uint256 requestId = _vrfCoordinator.requestRandomWords(
             _gasLane,
             _subscriptionId,
             REQUEST_CONFIRMATIONS,
@@ -71,48 +72,43 @@ contract CryptagendeGame is ERC721URIStorage, VRFConsumerBaseV2, Ownable {
             NUM_WORDS
         );
 
-        _requestIdToSender[requestId] = msg.sender;
-        emit NftRequested(requestId, msg.sender);
+        _tokenRequestID[_tokenCounter] = requestId;
+        emit ChainlinkRequestId(_tokenCounter ,requestId, msg.sender);
     }
 
-    function mint()public payable {
-        if (_tokenCounter+1 > _totalSupply){
-            revert MintIsOver(); 
-        }
-        if (msg.value < _mintFee) {
-            revert NeedMoreETHSent();
-        }
-        uint256 requestId = requestRandomWords();
-        string memory tokenUri = getCardURI(requestId);
-        
-        address cryptaOwner = _requestIdToSender[requestId];
+    function mint()public payable{
+        require(_tokenCounter < _totalSupply,"Mint Is Over!");
+        require(msg.value >= _mintFee,"Need More ETH Sent!");
+        require(_randomWords[0] != 0,"Need Random Number!");
+
+        string memory tokenUri = getCardURI(_randomWords[0]);
+        address cryptaOwner = msg.sender;
         uint256 tokenId = _tokenCounter;
         _tokenCounter = _tokenCounter + 1;
 
         _safeMint(cryptaOwner, tokenId);
         _setTokenURI(tokenId, tokenUri);
+
+        cardOpened[tokenId] = false;
+        _randomWords = new uint256[](0);
+
         emit NftMinted(cryptaOwner,tokenId);
     }
 
-    function getCardURI(uint256 requestId) private returns (string memory) {
+    function getCardURI(uint256 randomNumber) private view returns (string memory) {
         uint8 levelid;
-        uint256 rand = requestId % percentRange[percentRange.length -1];
-        if(rand == 0){
-            revert OutOfLevelRange();
-        }
+        uint256 rand = randomNumber % percentRange[percentRange.length -1];
 
         for(uint8 i = 1;i < percentRange.length;i++){
             if (rand > percentRange[i-1] && rand <= percentRange[i]){
                 levelid = levelIDs[i];
+                break;
             }
         }
 
         uint256 imageid = rand % (imageIDRange[levelid] - imageIDRange[levelid-1]);
-        if(imageid == 0){
-            revert OutOfLevelRange();
-        }
 
-        return string(abi.encodePacked(_baseTokenURI, "/", levelIDs[levelid].toString(), "/", imageIDRange[imageid].toString(), ".json"));
+        return string(abi.encodePacked(_baseTokenURI, "/", levelIDs[levelid].toString(), "/", imageid.toString(), ".json"));
     }
 
     function withdraw() public onlyOwner {
@@ -132,5 +128,21 @@ contract CryptagendeGame is ERC721URIStorage, VRFConsumerBaseV2, Ownable {
     }
     function totalSupply()public view returns(uint256){
         return _totalSupply;
+    }
+
+    function openCard(uint256 tokenId) public returns(string memory){
+        address owner = ownerOf(tokenId);
+        require(owner == msg.sender,"Only card owner can open this!");
+
+        cardOpened[tokenId] = true;
+        return tokenURI(tokenId);
+    }
+
+    function cardState(uint256 tokenId)public view returns(bool){
+        return cardOpened[tokenId];
+    }
+
+    function getRandomWords(uint256 index)public view returns(uint256){
+        return _randomWords[index];
     }
 }
