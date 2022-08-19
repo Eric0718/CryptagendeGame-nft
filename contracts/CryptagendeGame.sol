@@ -38,7 +38,7 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
 
     // NFT Variables
     //token counter,Continue to increase
-    uint256 public _tokenCounter = 0;
+    uint256 private _tokenCounter = 0;
 
     //base URI: "https://cryptagende.mypinata.cloud/ipfs/QmcbyaahDpJkNPzsYuWWn7iMJNBzmdZ9igd7LWJD5jYFRH";
     string private _tokenBaseURI ;
@@ -110,10 +110,10 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     }
 
     function mint(uint256 mintNum)public payable{
-        require(_tokenCounter < _totalSupply,"Mint is over!");
+        require(_tokenCounter + mintNum <= _totalSupply,"Mint is over!");
         require(!_paused,"Mint is puased!");
         require(msg.sender != address(0), "Invalid user address!");
-        require(mintNum <= (_randomWords.length - _tokenCounter),"Not enough randomWords to use!");
+        require(mintNum + _tokenCounter <= _randomWords.length,"Not enough randomWords to use!");
 
         if (_whiteList[msg.sender]){
             if (msg.value < mintNum * _whiteMintFee){
@@ -208,5 +208,9 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
 
     function updateCallbackGasLimit(uint32 _limit) public onlyOwner{
         _callbackGasLimit = _limit;
+    }
+
+    function addressInWhiteList(address _addr)public view returns(bool){
+        return _whiteList[_addr];
     }
 }
