@@ -1,53 +1,85 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.8;
 
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "hardhat/console.sol";
 
-
-error NeedMoreETHSent();
-error MintIsOver();
-error NeedRandomNumber();
-
-contract CryptagendeGame is ERC721URIStorage, VRFConsumerBaseV2, Ownable {
+contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     using Strings for uint256;
     using Strings for uint8;
 
     // Chainlink VRF Variables
+
+    //network coordinator
     VRFCoordinatorV2Interface private immutable _vrfCoordinator;
+
+    //subscription ID
     uint64 private immutable _subscriptionId;
+
+    //The gas lane to use, which specifies the maximum gas price to bump to.
     bytes32 private immutable _gasLane;
-    uint32 private immutable _callbackGasLimit;
-    uint16 private constant REQUEST_CONFIRMATIONS = 3;
-    uint32 private constant NUM_WORDS = 1;
-    uint256[] private _randomWords;
+
+    // Depends on the number of requested values that you want sent to the
+    // fulfillRandomWords() function. Adjust this limit based on the network 
+    // that you select, the size of the request,and the processing of the 
+    // callback request in the fulfillRandomWords() function.
+    uint32 private _callbackGasLimit;
+
+    // The default is 3, but you can set this higher.
+    uint16 private constant REQUEST_CONFIRMATIONS = 10;
+
+    // retrieve NUM_WORDS random values in one request.
+    // Cannot exceed VRFCoordinatorV2.MAX_NUM_WORDS.
+    uint32 private constant NUM_WORDS = 10;
+
 
     // NFT Variables
-    uint256 private _mintFee = 1000000000000000;
+    //token counter,Continue to increase
     uint256 public _tokenCounter = 0;
 
-    string private _baseTokenURI = "https://cryptagende.mypinata.cloud/ipfs/QmcbyaahDpJkNPzsYuWWn7iMJNBzmdZ9igd7LWJD5jYFRH";
+    //base URI: "https://cryptagende.mypinata.cloud/ipfs/QmcbyaahDpJkNPzsYuWWn7iMJNBzmdZ9igd7LWJD5jYFRH";
+    string private _tokenBaseURI ;
+
+    //totalsupply
     uint256 private _totalSupply = 10001;
-    string private _name = "Cryptagende 01 season: Battle of the gods";
-    string private _symbol = "BOG";
-  
+
+    // string private _name = "Cryptagende 01 season: Battle of the gods";
+    // string private _symbol = "CBOG";
+
+    bool private _paused = false;
+
+    //keep the randomWords from fulfillRandomWords() function.
+    uint256[] private _randomWords = new uint256[](0);
+
+    //tokenId to tokenURI
+    mapping(uint256 => string) _tokenURI;
+
+    uint256 private _whiteMintFee = 65000000000000000;
+    uint256 private _ordinaryMintFee = 81000000000000000;
+    //white list
+    mapping(address => bool) _whiteList;
+
+    //Number of images in each level
     uint256[8] private imageIDRange = [0, 20, 400, 600, 1500, 3200, 3700, 5300];
+
+    //level range
     uint8[8] private levelIDs = [0, 1, 2, 3, 4, 5, 6, 7];
-    uint256[8] private percentRange = [0, 1, 36, 90, 240, 440, 650, 1000];
 
-    mapping(uint256 => bool) cardOpened;
+    //lv1:3%,lv2：5%,lv3:8%,lv4:12%,lv5:18%,lv6:24%,lv7:30%
+    uint256[8] private percentRange = [0, 30, 80, 160, 280, 460, 700, 1000];
 
-    // VRF Helpers
-    mapping(uint256 => uint256) _tokenRequestID;
-
+    
     // Events
-    event ChainlinkRequestId(uint256 indexed _tokenCounter,uint256 requestId ,address requester);
+    event RequestedRandomWords(uint256 indexed _tokenCounter,uint256 requestId ,address requester);
     event NftMinted(address minter,uint256 tokenID);
 
     constructor(
+        string memory _name,
+        string memory _symbol,
+        string memory _baseUri,
         address vrfCoordinatorV2,
         uint64 subscriptionId,
         bytes32 gasLane, // keyHash
@@ -57,10 +89,13 @@ contract CryptagendeGame is ERC721URIStorage, VRFConsumerBaseV2, Ownable {
         _gasLane = gasLane;
         _subscriptionId = subscriptionId;
         _callbackGasLimit = callbackGasLimit;
+        _tokenBaseURI = _baseUri;
     }
 
     function fulfillRandomWords(uint256, uint256[] memory randomWords) internal override{
-       _randomWords = randomWords;
+        for(uint256 i = 0;i < randomWords.length;i++){
+            _randomWords.push(randomWords[i]);
+        }
     }
 
     function requestRandomWords()external onlyOwner{
@@ -71,78 +106,107 @@ contract CryptagendeGame is ERC721URIStorage, VRFConsumerBaseV2, Ownable {
             _callbackGasLimit,
             NUM_WORDS
         );
-
-        _tokenRequestID[_tokenCounter] = requestId;
-        emit ChainlinkRequestId(_tokenCounter ,requestId, msg.sender);
+        emit RequestedRandomWords(_tokenCounter ,requestId, msg.sender);
     }
 
-    function mint()public payable{
-        require(_tokenCounter < _totalSupply,"Mint Is Over!");
-        require(msg.value >= _mintFee,"Need More ETH Sent!");
-        require(_randomWords[0] != 0,"Need Random Number!");
+    function mint(uint256 mintNum)public payable{
+        require(_tokenCounter < _totalSupply,"Mint is over!");
+        require(!_paused,"Mint is puased!");
+        require(msg.sender != address(0), "Invalid user address!");
+        require(mintNum <= (_randomWords.length - _tokenCounter),"Not enough randomWords to use!");
 
-        string memory tokenUri = getCardURI(_randomWords[0]);
+        if (_whiteList[msg.sender]){
+            if (msg.value < mintNum * _whiteMintFee){
+                revert("Mint fee not enough!");
+            }
+        }else{
+            if (msg.value < mintNum * _ordinaryMintFee){
+                revert("Mint fee not enough!");
+            }
+        }
+
         address cryptaOwner = msg.sender;
-        uint256 tokenId = _tokenCounter;
-        _tokenCounter = _tokenCounter + 1;
-
-        _safeMint(cryptaOwner, tokenId);
-        _setTokenURI(tokenId, tokenUri);
-
-        cardOpened[tokenId] = false;
-        _randomWords = new uint256[](0);
-
-        emit NftMinted(cryptaOwner,tokenId);
+        for (uint256 i = 0;i < mintNum;i++){ 
+            require(_randomWords[_tokenCounter] > 0,"Need to request a random number first!");
+            uint256 tokenId = _tokenCounter;
+            _tokenCounter = _tokenCounter + 1;
+            _safeMint(cryptaOwner, tokenId);
+            string memory tokenUri = getCardURI(_randomWords[tokenId]);
+            _tokenURI[tokenId] = tokenUri;
+            emit NftMinted(cryptaOwner,tokenId);
+        }
     }
 
     function getCardURI(uint256 randomNumber) private view returns (string memory) {
-        uint8 levelid;
+        uint8 levelId;
         uint256 rand = randomNumber % percentRange[percentRange.length -1];
 
         for(uint8 i = 1;i < percentRange.length;i++){
             if (rand > percentRange[i-1] && rand <= percentRange[i]){
-                levelid = levelIDs[i];
+                levelId = levelIDs[i];
                 break;
             }
         }
-
-        uint256 imageid = rand % (imageIDRange[levelid] - imageIDRange[levelid-1]);
-
-        return string(abi.encodePacked(_baseTokenURI, "/", levelIDs[levelid].toString(), "/", imageid.toString(), ".json"));
+        if (levelId ==0 || levelId > levelIDs[7]){
+            revert("Invalid levelId");
+        }
+        uint256 imageId = rand % imageIDRange[levelId];
+        if (imageId == 0){
+            revert("Invalid imageId");
+        }
+        return string(abi.encodePacked(_tokenBaseURI, "/", levelIDs[levelId].toString(), "/", imageId.toString(), ".json"));
     }
 
     function withdraw() public onlyOwner {
         payable(msg.sender).transfer(address(this).balance);
     }
 
-    function setMintFee(uint256 mintFee)public onlyOwner{
-        _mintFee = mintFee;
+    function setWhiteMintFee(uint256 mintFee)public onlyOwner{
+        _whiteMintFee = mintFee;
     }
 
-    function getMintFee() public view returns (uint256) {
-        return _mintFee;
+    function getwhiteMintFee() public view returns (uint256) {
+        return _whiteMintFee;
+    }
+
+    function setOrdinaryMintFee(uint256 mintFee)public onlyOwner{
+        _ordinaryMintFee = mintFee;
+    }
+
+    function getOrdinaryMintFee() public view returns (uint256) {
+        return _ordinaryMintFee;
     }
 
     function tokenCounter() public view returns (uint256) {
         return _tokenCounter;
     }
-    function totalSupply()public view returns(uint256){
+
+    function totalSupply()public view override returns(uint256){
         return _totalSupply;
     }
 
-    function openCard(uint256 tokenId) public returns(string memory){
-        address owner = ownerOf(tokenId);
-        require(owner == msg.sender,"Only card owner can open this!");
-
-        cardOpened[tokenId] = true;
-        return tokenURI(tokenId);
-    }
-
-    function cardState(uint256 tokenId)public view returns(bool){
-        return cardOpened[tokenId];
+    function tokenURI(uint256 tokenId) public view override returns(string memory){
+        require(_exists(tokenId), "ERC721Metadata: URI query for nonexisting token");
+        return _tokenURI[tokenId];
     }
 
     function getRandomWords(uint256 index)public view returns(uint256){
         return _randomWords[index];
+    }
+
+    function setPause(bool _state)public onlyOwner{
+        _paused = _state;
+    }
+
+    function addWhiteList(address _addr)public onlyOwner{
+        _whiteList[_addr] = true;
+    }
+
+    function removeWhiteList(address _addr)public onlyOwner{
+        _whiteList[_addr] = false;
+    }
+
+    function updateCallbackGasLimit(uint32 _limit) public onlyOwner{
+        _callbackGasLimit = _limit;
     }
 }
