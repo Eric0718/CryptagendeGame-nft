@@ -42,10 +42,14 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     log("----------------------------------------------------")
     arguments = [
+        networkConfig[chainId]["tokenName"],
+        networkConfig[chainId]["symbol"],
+        networkConfig[chainId]["baseUri"],
         vrfCoordinatorV2Address,
         subscriptionId,
         networkConfig[chainId]["gasLane"],
         networkConfig[chainId]["callbackGasLimit"],
+
     ]
     const cyrpta = await deploy("CryptagendeGame", {
         from: deployer,
