@@ -32,7 +32,8 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
 
     // retrieve NUM_WORDS random values in one request.
     // Cannot exceed VRFCoordinatorV2.MAX_NUM_WORDS.
-    uint32 private constant NUM_WORDS = 100;
+    //uint32 private constant NUM_WORDS = 100;
+    uint32 private  NUM_WORDS = 100;
 
 
     // NFT Variables
@@ -200,7 +201,7 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         _whiteList[_addr] = false;
     }
 
-    function setCallbackGasLimit(uint32 _limit) public onlyOwner{
+    function setVrfCallbackGasLimit(uint32 _limit) public onlyOwner{
         _vrfCallbackGasLimit = _limit;
     }
 
