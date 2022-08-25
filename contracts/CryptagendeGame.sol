@@ -31,14 +31,11 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
 
 
     // NFT Variables
-    //token counter,Continue to increase
-    uint256 private _tokenCounter = 0;
-
     //base URI;
     string private _tokenBaseURI = "https://cryptagende.mypinata.cloud/ipfs/QmcbyaahDpJkNPzsYuWWn7iMJNBzmdZ9igd7LWJD5jYFRH";
 
     //totalsupply
-    uint256 private _totalSupply = 10001;
+    uint256 public constant maxSupply = 10001;
 
     // string private _name = "Cryptagende 01 season: Battle of the gods";
     // string private _symbol = "CBOG";
@@ -100,9 +97,10 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     }
 
     function mint(uint256 mintNum)public payable{
+        uint256 supply = totalSupply();
         require(mintNum <= _mintLimitEach,"Mint limit is 50 each time!");
         require(_randomWords > 0,"Mint: request a random nmber first!");
-        require(_tokenCounter + mintNum <= _totalSupply,"Mint is over!");
+        require(supply + mintNum <= maxSupply,"Mint is over!");
         require(!_paused,"Mint is puased!");
         require(msg.sender != address(0), "Invalid user address!");
         
@@ -116,10 +114,8 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
             }
         }
 
-        for (uint256 i = 0;i < mintNum;i++){ 
-            uint256 tokenId = _tokenCounter;
-            _tokenCounter = _tokenCounter + 1;
-            _safeMint(msg.sender, tokenId);
+        for (uint256 i = 1;i <= mintNum;i++){ 
+            _safeMint(msg.sender, supply + i);
         }
     }
 
@@ -144,11 +140,10 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         return string(abi.encodePacked(_tokenBaseURI, "/", levelIDs[levelId].toString(), "/", imageId.toString(), ".json"));
     }
 
-    function withdraw() public onlyOwner {
+    function withdraw() public payable onlyOwner {
         payable(msg.sender).transfer(address(this).balance);
     }
 
-    //test function
     function setWhiteMintFee(uint256 mintFee)public onlyOwner{
         _whiteMintFee = mintFee;
     }
@@ -156,21 +151,13 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     function getwhiteMintFee() public view returns (uint256) {
         return _whiteMintFee;
     }
-    //test function
+   
     function setOrdinaryMintFee(uint256 mintFee)public onlyOwner{
         _ordinaryMintFee = mintFee;
     }
 
     function getOrdinaryMintFee() public view returns (uint256) {
         return _ordinaryMintFee;
-    }
-
-    function tokenCounter() public view returns (uint256) {
-        return _tokenCounter;
-    }
-
-    function totalSupply()public view override returns(uint256){
-        return _totalSupply;
     }
 
     function tokenURI(uint256 tokenId) public view override returns(string memory){
