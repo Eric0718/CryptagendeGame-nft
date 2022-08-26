@@ -21,7 +21,7 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     // fulfillRandomWords() function. Adjust this limit based on the network 
     // that you select, the size of the request,and the processing of the 
     // callback request in the fulfillRandomWords() function.
-    uint32 private CALLBACKGASLIMIT = 100000;
+    uint32 private CALLBACKGASLIMIT;
 
     // The default is 3, but you can set this higher.
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
@@ -32,8 +32,7 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
 
     // NFT Variables
     //base URI;
-    string private _tokenBaseURI = "https://cryptagende.mypinata.cloud/ipfs/QmcbyaahDpJkNPzsYuWWn7iMJNBzmdZ9igd7LWJD5jYFRH";
-
+    string private _tokenBaseURI;
     //totalsupply
     uint256 public constant maxSupply = 10001;
 
@@ -46,15 +45,15 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     uint256 private _randomWords;
 
     //0.065ETH
-    uint256 private _whiteMintFee = 65000000000000000;
+    uint256 private _whiteMintFee;
 
     //0.081ETH
-    uint256 private _ordinaryMintFee = 81000000000000000;
+    uint256 private _ordinaryMintFee;
     //white list
     mapping(address => bool) _whiteList;
 
     //mint amount limit each time.
-    uint32 private _mintLimitEach = 50;
+    uint32 private _mintLimitEach;
 
     //Number of images in each level
     uint256[8] private imagesEachLevel = [0, 20, 400, 600, 1500, 3200, 3700, 5300];
@@ -74,8 +73,14 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         address vrfCoordinatorV2,
         bytes32 gasLane
     ) VRFConsumerBaseV2(vrfCoordinatorV2) ERC721(_name, _symbol) {
+        _mintLimitEach = 50;
+        _whiteMintFee = 65000000000000000;
+        _ordinaryMintFee = 81000000000000000;
+       _tokenBaseURI = "https://cryptagende.mypinata.cloud/ipfs/QmcbyaahDpJkNPzsYuWWn7iMJNBzmdZ9igd7LWJD5jYFRH";
+
         _vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinatorV2);
         _gasLane = gasLane;
+        CALLBACKGASLIMIT = 100000;
     }
 
     function fulfillRandomWords(uint256, uint256[] memory randomWords) internal override{
@@ -121,7 +126,7 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
 
     function _generateTokenURIByRandomNumber(uint256 tokenId) private view returns (string memory) {
         if (_randomWords == 0){
-            revert("Request a random nmber first!");
+            revert("Request a random number first!");
         }
         uint256 randomNumber = uint256(keccak256(abi.encode(_randomWords, tokenId)));
         
@@ -140,7 +145,7 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         return string(abi.encodePacked(_tokenBaseURI, "/", levelIDs[levelId].toString(), "/", imageId.toString(), ".json"));
     }
 
-    function withdraw() public payable onlyOwner {
+    function withdraw() public onlyOwner {
         payable(msg.sender).transfer(address(this).balance);
     }
 
