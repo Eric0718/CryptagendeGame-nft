@@ -90,7 +90,7 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
 
     function requestRandomWords(uint64 subscriptionId)external onlyOwner{
         require(_randomWords == 0,"RandomWods already requested!");
-        require(CALLBACKGASLIMIT > 0,"CALLBACKGASLIMIT is 0!");
+        require(CALLBACKGASLIMIT > 0,"You don't need to requestRandomWords!");
         uint256 requestId = _vrfCoordinator.requestRandomWords(
             _gasLane,
             subscriptionId,
