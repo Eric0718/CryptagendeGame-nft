@@ -65,6 +65,9 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     //percentageLevel=> lv1:3%,lv2：5%,lv3:8%,lv4:12%,lv5:18%,lv6:24%,lv7:30%
     uint256[8] private percentageLevel = [0, 30, 80, 160, 280, 460, 700, 1000];
 
+    //URI suffix
+    string _uriSuffix = ".json";
+
     // Events
     event RequestedRandomWords(uint256 requestId ,address requester);
   
@@ -156,7 +159,7 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         }
       
         uint256 imageId = randomNumber % imagesEachLevel[levelId] + 1;
-        return string(abi.encodePacked(_tokenBaseURI, "/", levelIDs[levelId].toString(), "/", imageId.toString(), ".json"));
+        return string(abi.encodePacked(_tokenBaseURI, "/", levelIDs[levelId].toString(), "/", imageId.toString(), _uriSuffix));
     }
 
     // withdraw balance in contract
