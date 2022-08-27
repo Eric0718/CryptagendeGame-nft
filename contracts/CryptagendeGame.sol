@@ -125,12 +125,11 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     }
 
     function _generateTokenURIByRandomNumber(uint256 tokenId) private view returns (string memory) {
-        if (_randomWords == 0){
-            revert("Request a random number first!");
-        }
-        uint256 randomNumber = uint256(keccak256(abi.encode(_randomWords, tokenId)));
+        require(_exists(tokenId), "ERC721Metadata: URI query for nonexisting token");
+        require (_randomWords > 0,"Request a random number first!");
         
         uint8 levelId;
+        uint256 randomNumber = uint256(keccak256(abi.encode(_randomWords, tokenId)));
         uint256 rand = randomNumber % percentageLevel[percentageLevel.length -1] + 1;
 
         for(uint8 i = 1;i < percentageLevel.length;i++){
@@ -141,7 +140,6 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         }
       
         uint256 imageId = randomNumber % imagesEachLevel[levelId] + 1;
-     
         return string(abi.encodePacked(_tokenBaseURI, "/", levelIDs[levelId].toString(), "/", imageId.toString(), ".json"));
     }
 
@@ -149,16 +147,8 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         payable(msg.sender).transfer(address(this).balance);
     }
 
-    function setWhiteMintFee(uint256 mintFee)public onlyOwner{
-        _whiteMintFee = mintFee;
-    }
-
     function getwhiteMintFee() public view returns (uint256) {
         return _whiteMintFee;
-    }
-   
-    function setOrdinaryMintFee(uint256 mintFee)public onlyOwner{
-        _ordinaryMintFee = mintFee;
     }
 
     function getOrdinaryMintFee() public view returns (uint256) {
@@ -166,7 +156,6 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     }
 
     function tokenURI(uint256 tokenId) public view override returns(string memory){
-        require(_exists(tokenId), "ERC721Metadata: URI query for nonexisting token");
         return _generateTokenURIByRandomNumber(tokenId);
     }
 
