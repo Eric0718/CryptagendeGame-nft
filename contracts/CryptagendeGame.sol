@@ -83,11 +83,25 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         CALLBACKGASLIMIT = 100000;
     }
 
+    /**
+   * @notice fulfillRandomness handles the VRF response. Your contract must
+   * @notice implement it. See "SECURITY CONSIDERATIONS" above for important
+   * @notice principles to keep in mind when implementing your fulfillRandomness
+   * @notice method.
+   *
+   * @dev VRFConsumerBaseV2 expects its subcontracts to have a method with this
+   * @dev signature, and will call it once it has verified the proof
+   * @dev associated with the randomness. (It is triggered via a call to
+   * @dev rawFulfillRandomness, below.)
+   *
+   * @param randomWords the VRF output expanded to the requested number of words
+   */
     function fulfillRandomWords(uint256, uint256[] memory randomWords) internal override{
        _randomWords = randomWords[0];
         CALLBACKGASLIMIT = 0;
     }
 
+    // request a random number from VRFCoordinator V2
     function requestRandomWords(uint64 subscriptionId)external onlyOwner{
         require(_randomWords == 0,"RandomWods already requested!");
         require(CALLBACKGASLIMIT > 0,"You don't need to requestRandomWords!");
@@ -101,6 +115,7 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         emit RequestedRandomWords(requestId, msg.sender);
     }
 
+    // mint nfts with a mintNum 
     function mint(uint256 mintNum)public payable{
         uint256 supply = totalSupply();
         require(mintNum <= _mintLimitEach,"Mint limit is 50 each time!");
@@ -124,6 +139,7 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         }
     }
 
+    //generate TokenURI By RandomNumber and tokenId
     function _generateTokenURIByRandomNumber(uint256 tokenId) private view returns (string memory) {
         require(_exists(tokenId), "ERC721Metadata: URI query for nonexisting token");
         require (_randomWords > 0,"Request a random number first!");
@@ -143,50 +159,62 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         return string(abi.encodePacked(_tokenBaseURI, "/", levelIDs[levelId].toString(), "/", imageId.toString(), ".json"));
     }
 
+    // withdraw balance in contract
     function withdraw() public onlyOwner {
         payable(msg.sender).transfer(address(this).balance);
     }
 
+    // get whiteList mint fee
     function getwhiteMintFee() public view returns (uint256) {
         return _whiteMintFee;
     }
 
+    // get ordinary user mint fee 
     function getOrdinaryMintFee() public view returns (uint256) {
         return _ordinaryMintFee;
     }
 
+    //get tokenURI by tokenId
     function tokenURI(uint256 tokenId) public view override returns(string memory){
         return _generateTokenURIByRandomNumber(tokenId);
     }
 
+    //set pause or unpause.
     function setPause()public onlyOwner{
         _paused = !_paused;
     }
 
+    // add user into whiteList
     function addWhiteList(address _addr)public onlyOwner{
         _whiteList[_addr] = true;
     }
 
+    //remove user from whiteList
     function removeWhiteList(address _addr)public onlyOwner{
         _whiteList[_addr] = false;
     }
 
+    // Is user in whiteList
     function userInWhiteList(address _addr)public view returns(bool){
         return _whiteList[_addr];
     }
 
+    //get each mint limit
     function getMintLimitEach()public view returns(uint32){
         return _mintLimitEach;
     }
 
+    //set mint limit 
     function setMintLimitEach(uint32 maxAmnout)public onlyOwner{
         _mintLimitEach = maxAmnout;
     }
 
+    // baseURI
     function baseURI() public view returns (string memory) {
         return _tokenBaseURI;
     }
 
+    //set baseURI
     function setBaseURI(string memory baseUri) public onlyOwner{
         _tokenBaseURI = baseUri;
     }
