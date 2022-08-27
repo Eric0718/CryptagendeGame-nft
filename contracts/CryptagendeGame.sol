@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-import "hardhat/console.sol";
+//import "hardhat/console.sol";
 
 contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     using Strings for uint256;
@@ -156,12 +156,6 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         }
       
         uint256 imageId = randomNumber % imagesEachLevel[levelId] + 1;
-        console.log(
-            "tokenId: %d,level: %d,imageId: %d",
-            tokenId,
-            levelId,
-            imageId
-        );
         return string(abi.encodePacked(_tokenBaseURI, "/", levelIDs[levelId].toString(), "/", imageId.toString(), ".json"));
     }
 

@@ -9,4 +9,5 @@ deployments
 #Hardhat files
 cache
 artifacts
+*.txt
 

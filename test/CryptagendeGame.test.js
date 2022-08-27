@@ -18,16 +18,21 @@ describe("CryptagendeGame",function(){
     });
 
     it("testMint",async function(){
-        const amount = "100"
-
-        await crypta.mint(amount)
+        const amount = "50"
+        value = "5000000000000000000"
+        await crypta.mint(amount,{ value: value })
         const expectAmount = await crypta.totalSupply()
 
         assert.equal(expectAmount.toString(),amount)
 
         const uri = await crypta.tokenURI(amount)
+        console.log(
+            "tokenId: %s,URI: %s,totalSupply: %d",
+            amount,
+            uri,
+            expectAmount
+        )
     })
-
 });
 
 
