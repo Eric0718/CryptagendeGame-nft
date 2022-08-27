@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+import "hardhat/console.sol";
 
 contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     using Strings for uint256;
@@ -76,11 +77,10 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         _mintLimitEach = 50;
         _whiteMintFee = 64000000000000000;
         _ordinaryMintFee = 80000000000000000;
-       _tokenBaseURI = "https://cryptagende.mypinata.cloud/ipfs/QmcbyaahDpJkNPzsYuWWn7iMJNBzmdZ9igd7LWJD5jYFRH";
-
-        _vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinatorV2);
         _gasLane = gasLane;
         CALLBACKGASLIMIT = 100000;
+        _vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinatorV2);
+        _tokenBaseURI = "https://cryptagende.mypinata.cloud/ipfs/QmcbyaahDpJkNPzsYuWWn7iMJNBzmdZ9igd7LWJD5jYFRH";
     }
 
     /**
@@ -156,6 +156,12 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         }
       
         uint256 imageId = randomNumber % imagesEachLevel[levelId] + 1;
+        console.log(
+            "tokenId: %d,level: %d,imageId: %d",
+            tokenId,
+            levelId,
+            imageId
+        );
         return string(abi.encodePacked(_tokenBaseURI, "/", levelIDs[levelId].toString(), "/", imageId.toString(), ".json"));
     }
 
