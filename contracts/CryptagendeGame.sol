@@ -61,7 +61,7 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     //level range
     uint8[8] private levelIDs = [0, 1, 2, 3, 4, 5, 6, 7];
 
-    //lv1:3%,lv2：5%,lv3:8%,lv4:12%,lv5:18%,lv6:24%,lv7:30%
+    //percentageLevel=> lv1:3%,lv2：5%,lv3:8%,lv4:12%,lv5:18%,lv6:24%,lv7:30%
     uint256[8] private percentageLevel = [0, 30, 80, 160, 280, 460, 700, 1000];
 
     // Events
