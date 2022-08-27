@@ -44,10 +44,10 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     //keep the randomWords from fulfillRandomWords() function.
     uint256 private _randomWords;
 
-    //0.065ETH
+    //0.064ETH
     uint256 private _whiteMintFee;
 
-    //0.081ETH
+    //0.08ETH
     uint256 private _ordinaryMintFee;
     //white list
     mapping(address => bool) _whiteList;
@@ -74,8 +74,8 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         bytes32 gasLane
     ) VRFConsumerBaseV2(vrfCoordinatorV2) ERC721(_name, _symbol) {
         _mintLimitEach = 50;
-        _whiteMintFee = 65000000000000000;
-        _ordinaryMintFee = 81000000000000000;
+        _whiteMintFee = 64000000000000000;
+        _ordinaryMintFee = 80000000000000000;
        _tokenBaseURI = "https://cryptagende.mypinata.cloud/ipfs/QmcbyaahDpJkNPzsYuWWn7iMJNBzmdZ9igd7LWJD5jYFRH";
 
         _vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinatorV2);
