@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-//import "hardhat/console.sol";
 
 contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     using Strings for uint256;
@@ -43,7 +42,7 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     bool private _paused = false;
 
     //keep the randomWords from fulfillRandomWords() function.
-    uint256 private _randomWords;
+    uint256 private _randomWords = 0;
 
     //0.064ETH
     uint256 private _whiteMintFee;
@@ -144,8 +143,8 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
 
     //generate TokenURI By RandomNumber and tokenId
     function _generateTokenURIByRandomNumber(uint256 tokenId) private view returns (string memory) {
-        require(_exists(tokenId), "ERC721Metadata: URI query for nonexisting token");
         require (_randomWords > 0,"Request a random number first!");
+        require(_exists(tokenId), "ERC721Metadata: URI query for nonexisting token");
         
         uint8 levelId;
         uint256 randomNumber = uint256(keccak256(abi.encode(_randomWords, tokenId)));
@@ -188,8 +187,10 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     }
 
     // add user into whiteList
-    function addWhiteList(address _addr)public onlyOwner{
-        _whiteList[_addr] = true;
+    function addWhiteList(address[] memory _addrs)public onlyOwner{
+        for(uint256 i = 0;i < _addrs.length;i++){
+            _whiteList[_addrs[i]] = true;
+        }
     }
 
     //remove user from whiteList
