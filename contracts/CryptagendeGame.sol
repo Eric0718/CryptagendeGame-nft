@@ -21,7 +21,7 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     // fulfillRandomWords() function. Adjust this limit based on the network 
     // that you select, the size of the request,and the processing of the 
     // callback request in the fulfillRandomWords() function.
-    uint32 private CALLBACKGASLIMIT;
+    uint32 private immutable CALLBACKGASLIMIT;
 
     // The default is 3, but you can set this higher.
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
@@ -45,10 +45,10 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     uint256 private _randomWords = 0;
 
     //0.064ETH
-    uint256 private _whiteMintFee;
+    uint256 private immutable _whiteMintFee;
 
     //0.08ETH
-    uint256 private _ordinaryMintFee;
+    uint256 private immutable _ordinaryMintFee;
     //white list
     mapping(address => bool) _whiteList;
 
@@ -99,8 +99,8 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
    * @param randomWords the VRF output expanded to the requested number of words
    */
     function fulfillRandomWords(uint256, uint256[] memory randomWords) internal override{
+        require(_randomWords == 0);
        _randomWords = randomWords[0];
-        CALLBACKGASLIMIT = 0;
     }
 
     // request a random number from VRFCoordinator V2
@@ -150,6 +150,7 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         uint8 levelId;
         uint256 randomNumber = uint256(keccak256(abi.encode(_randomWords, tokenId)));
         uint256 rand = SafeMath.mod(randomNumber, percentageLevel[percentageLevel.length -1]) + 1; 
+        require(rand >= 1 && rand <= percentageLevel[percentageLevel.length -1],"Rand out of percentageLevel!");
 
         for(uint8 i = 1;i < percentageLevel.length;i++){
             if (rand > percentageLevel[i-1] && rand <= percentageLevel[i]){
@@ -159,7 +160,12 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         }
       
         uint256 imageId = SafeMath.mod(randomNumber,imagesEachLevel[levelId]) + 1;
-        return string(abi.encodePacked(_tokenBaseURI, "/", levelIDs[levelId].toString(), "/", imageId.toString(), _uriSuffix));
+        require(imageId >= 1 && rand <= imagesEachLevel[levelId],"ImageId out of imagesEachLevel!");
+
+        string memory baseUri = _baseURI();
+        require(bytes(baseUri).length > 0,"TokenBaseURI is empty,please set it first!");
+
+        return string(abi.encodePacked(baseUri, "/", levelIDs[levelId].toString(), "/", imageId.toString(), _uriSuffix));
     }
 
     // withdraw balance in contract
@@ -214,14 +220,19 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         _mintLimitEach = maxAmnout;
     }
 
-    // baseURI
+    // get baseURI
     function baseURI() public view returns (string memory) {
-        return _tokenBaseURI;
+        return _baseURI();
     }
 
     //set baseURI
     function setBaseURI(string memory baseUri) public onlyOwner{
         _tokenBaseURI = baseUri;
+    }
+
+    // override _baseURI
+    function _baseURI() internal view override returns (string memory) {
+        return _tokenBaseURI;
     }
 }
 
