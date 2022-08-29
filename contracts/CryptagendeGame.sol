@@ -187,7 +187,7 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     }
 
     // add user into whiteList
-    function addWhiteList(address[] memory _addrs)public onlyOwner{
+    function addWhiteList(address[] calldata _addrs)public onlyOwner{
         for(uint256 i = 0;i < _addrs.length;i++){
             _whiteList[_addrs[i]] = true;
         }
