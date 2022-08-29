@@ -10,4 +10,5 @@ deployments
 cache
 artifacts
 *.txt
+boardApe.sol
 

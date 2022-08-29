@@ -120,18 +120,19 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     // mint nfts with a mintNum 
     function mint(uint256 mintNum)public payable{
         uint256 supply = totalSupply();
-        require(mintNum <= _mintLimitEach,"Mint limit is 50 each time!");
         require(_randomWords > 0,"Mint: request a random nmber first!");
-        require(supply + mintNum <= maxSupply,"Mint is over!");
+        require(mintNum <= _mintLimitEach,"Mint limit is 50 each time!");
+        require(supply < maxSupply,"All cards have been Claimed.");
+        require(supply + mintNum <= maxSupply,"Mint amount is over left!");
         require(!_paused,"Mint is puased!");
         require(msg.sender != address(0), "Invalid user address!");
         
         if (_whiteList[msg.sender]){
-            if (msg.value < mintNum * _whiteMintFee){
+            if (msg.value < SafeMath.mul(mintNum, _whiteMintFee)){//mintNum * _whiteMintFee){
                 revert("WhiteList mint fee not enough!");
             }
         }else{
-            if (msg.value < mintNum * _ordinaryMintFee){
+            if (msg.value < SafeMath.mul(mintNum, _ordinaryMintFee)){
                 revert("Ordinary mint fee not enough!");
             }
         }
@@ -148,7 +149,7 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         
         uint8 levelId;
         uint256 randomNumber = uint256(keccak256(abi.encode(_randomWords, tokenId)));
-        uint256 rand = randomNumber % percentageLevel[percentageLevel.length -1] + 1;
+        uint256 rand = SafeMath.mod(randomNumber, percentageLevel[percentageLevel.length -1]) + 1; 
 
         for(uint8 i = 1;i < percentageLevel.length;i++){
             if (rand > percentageLevel[i-1] && rand <= percentageLevel[i]){
@@ -157,12 +158,12 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
             }
         }
       
-        uint256 imageId = randomNumber % imagesEachLevel[levelId] + 1;
+        uint256 imageId = SafeMath.mod(randomNumber,imagesEachLevel[levelId]) + 1;
         return string(abi.encodePacked(_tokenBaseURI, "/", levelIDs[levelId].toString(), "/", imageId.toString(), _uriSuffix));
     }
 
     // withdraw balance in contract
-    function withdraw() public onlyOwner {
+    function withdraw() public payable onlyOwner {
         payable(msg.sender).transfer(address(this).balance);
     }
 
@@ -221,5 +222,147 @@ contract CryptagendeGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     //set baseURI
     function setBaseURI(string memory baseUri) public onlyOwner{
         _tokenBaseURI = baseUri;
+    }
+}
+
+library SafeMath {
+    /**
+     * @dev Returns the addition of two unsigned integers, reverting on
+     * overflow.
+     *
+     * Counterpart to Solidity's `+` operator.
+     *
+     * Requirements:
+     * - Addition cannot overflow.
+     */
+    function add(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 c = a + b;
+        require(c >= a, "SafeMath: addition overflow");
+
+        return c;
+    }
+
+    /**
+     * @dev Returns the subtraction of two unsigned integers, reverting on
+     * overflow (when the result is negative).
+     *
+     * Counterpart to Solidity's `-` operator.
+     *
+     * Requirements:
+     * - Subtraction cannot overflow.
+     */
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        return sub(a, b, "SafeMath: subtraction overflow");
+    }
+
+    /**
+     * @dev Returns the subtraction of two unsigned integers, reverting with custom message on
+     * overflow (when the result is negative).
+     *
+     * Counterpart to Solidity's `-` operator.
+     *
+     * Requirements:
+     * - Subtraction cannot overflow.
+     *
+     * _Available since v2.4.0._
+     */
+    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+        require(b <= a, errorMessage);
+        uint256 c = a - b;
+
+        return c;
+    }
+
+    /**
+     * @dev Returns the multiplication of two unsigned integers, reverting on
+     * overflow.
+     *
+     * Counterpart to Solidity's `*` operator.
+     *
+     * Requirements:
+     * - Multiplication cannot overflow.
+     */
+    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+        // Gas optimization: this is cheaper than requiring 'a' not being zero, but the
+        // benefit is lost if 'b' is also tested.
+        // See: https://github.com/OpenZeppelin/openzeppelin-contracts/pull/522
+        if (a == 0) {
+            return 0;
+        }
+
+        uint256 c = a * b;
+        require(c / a == b, "SafeMath: multiplication overflow");
+
+        return c;
+    }
+
+    /**
+     * @dev Returns the integer division of two unsigned integers. Reverts on
+     * division by zero. The result is rounded towards zero.
+     *
+     * Counterpart to Solidity's `/` operator. Note: this function uses a
+     * `revert` opcode (which leaves remaining gas untouched) while Solidity
+     * uses an invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     * - The divisor cannot be zero.
+     */
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+        return div(a, b, "SafeMath: division by zero");
+    }
+
+    /**
+     * @dev Returns the integer division of two unsigned integers. Reverts with custom message on
+     * division by zero. The result is rounded towards zero.
+     *
+     * Counterpart to Solidity's `/` operator. Note: this function uses a
+     * `revert` opcode (which leaves remaining gas untouched) while Solidity
+     * uses an invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     * - The divisor cannot be zero.
+     *
+     * _Available since v2.4.0._
+     */
+    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+        // Solidity only automatically asserts when dividing by 0
+        require(b > 0, errorMessage);
+        uint256 c = a / b;
+        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+
+        return c;
+    }
+
+    /**
+     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),
+     * Reverts when dividing by zero.
+     *
+     * Counterpart to Solidity's `%` operator. This function uses a `revert`
+     * opcode (which leaves remaining gas untouched) while Solidity uses an
+     * invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     * - The divisor cannot be zero.
+     */
+    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
+        return mod(a, b, "SafeMath: modulo by zero");
+    }
+
+    /**
+     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),
+     * Reverts with custom message when dividing by zero.
+     *
+     * Counterpart to Solidity's `%` operator. This function uses a `revert`
+     * opcode (which leaves remaining gas untouched) while Solidity uses an
+     * invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     * - The divisor cannot be zero.
+     *
+     * _Available since v2.4.0._
+     */
+    function mod(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+        require(b != 0, errorMessage);
+        return a % b;
     }
 }
